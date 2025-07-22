@@ -121,6 +121,15 @@ export default function DataTestPage() {
                             <p>No data available for this tab</p>
                         )}
                     </Card>
+
+                    {selectedTabData.length > 0 && (
+                        <Card className="p-4 bg-white rounded-lg shadow mt-8">
+                            <h2 className="text-xl font-semibold mb-2">First Row Data (Raw JSON)</h2>
+                            <pre className="bg-gray-100 p-4 rounded-md overflow-x-auto">
+                                <code>{JSON.stringify(selectedTabData[0], null, 2)}</code>
+                            </pre>
+                        </Card>
+                    )}
                 </div>
             )}
         </div>

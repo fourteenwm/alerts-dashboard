@@ -7,8 +7,9 @@ import * as d3 from 'd3'
 import { Card } from '@/components/ui/card'
 import { format, isFirstDayOfMonth } from 'date-fns'
 import { formatCurrencyForAxis, formatConversionsForAxis } from '@/lib/utils'
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip'
 
-type ChartType = 'line' | 'bar'
+type ChartType = 'line' | 'bar' | 'area'
 
 interface ChartData {
   date: string
@@ -61,6 +62,18 @@ export function MetricsChart({
     const svg = d3.select(svgRef.current)
       .append('g')
       .attr('transform', `translate(${margin.left},${margin.top})`)
+
+    const tooltip = d3.select(svgRef.current.parentElement)
+      .append("div")
+      .attr("class", "tooltip")
+      .style("opacity", 0)
+      .style("position", "absolute")
+      .style("background-color", "white")
+      .style("border", "solid")
+      .style("border-width", "1px")
+      .style("border-radius", "5px")
+      .style("padding", "10px");
+
 
     // Parse dates and filter labels to show only first of month
     const dates = data.map(d => new Date(d.date)).sort((a, b) => a.getTime() - b.getTime())
@@ -160,7 +173,32 @@ export function MetricsChart({
         .call(g => g.selectAll('.tick text').attr('fill', '#64748b'))
     }
 
-    if (currentChartType === 'line') {
+    if (currentChartType === 'line' || currentChartType === 'area') {
+      if (currentChartType === 'area') {
+        const area1 = d3.area<ChartData>()
+          .x(d => (xScale as d3.ScaleTime<number, number>)(new Date(d.date)))
+          .y0(height)
+          .y1(d => y1Scale(d[metric1.key] as number))
+
+        svg.append('path')
+          .datum(data)
+          .attr('fill', metric1.color)
+          .attr('fill-opacity', 0.3)
+          .attr('d', area1 as any)
+
+        if (metric2 && y2Scale) {
+          const area2 = d3.area<ChartData>()
+            .x(d => (xScale as d3.ScaleTime<number, number>)(new Date(d.date)))
+            .y0(height)
+            .y1(d => y2Scale(d[metric2.key] as number))
+
+          svg.append('path')
+            .datum(data)
+            .attr('fill', metric2.color)
+            .attr('fill-opacity', 0.3)
+            .attr('d', area2 as any)
+        }
+      }
       // Add lines
       const line1 = d3.line<ChartData>()
         .x(d => (xScale as d3.ScaleTime<number, number>)(new Date(d.date)))
@@ -185,7 +223,7 @@ export function MetricsChart({
           .attr('stroke-width', 2)
           .attr('d', line2 as any) // Type assertion needed due to d3 typing limitations
       }
-    } else {
+    } else if (currentChartType === 'bar') {
       // Add bars
       const bars = svg.append('g')
         .selectAll('g')
@@ -214,62 +252,78 @@ export function MetricsChart({
       }
     }
 
-    // Add legend
-    const legend = svg.append('g')
-      .attr('transform', `translate(${width - 200}, -10)`)
+    const focus = svg.append('g')
+      .attr('class', 'focus')
+      .style('display', 'none');
 
-    const legendSymbol = currentChartType === 'line' ? 'line' : 'rect'
+    focus.append('line')
+      .attr('class', 'x-hover-line hover-line')
+      .attr('y1', 0)
+      .attr('y2', height);
 
-    if (legendSymbol === 'line') {
-      legend.append('line')
-        .attr('x1', 0)
-        .attr('x2', 20)
-        .attr('stroke', metric1.color)
-        .attr('stroke-width', 2)
-    } else {
-      legend.append('rect')
-        .attr('width', 15)
-        .attr('height', 15)
-        .attr('fill', barColors?.[metric1.key]?.(data[0]?.[metric1.key] as number) || metric1.color)
-        .attr('opacity', 0.8)
-    }
+    svg.append('rect')
+      .attr('class', 'overlay')
+      .attr('width', width)
+      .attr('height', height)
+      .style('fill', 'none')
+      .style('pointer-events', 'all')
+      .on('mouseover', () => {
+        focus.style('display', null);
+        tooltip.style('opacity', 1);
+      })
+      .on('mouseout', () => {
+        focus.style('display', 'none');
+        tooltip.style('opacity', 0);
+      })
+      .on('mousemove', (event) => {
+        const [mx, my] = d3.pointer(event);
+        let d: ChartData | undefined;
 
-    legend.append('text')
-      .attr('x', 25)
-      .attr('y', legendSymbol === 'line' ? 4 : 12)
-      .text(metric1.label)
-      .attr('fill', '#64748b')
-      .style('font-size', '12px')
+        // Check if xScale has an 'invert' method to distinguish time scales from band scales
+        if ('invert' in xScale) {
+          // Logic for Line and Area charts (time scale)
+          const timeScale = xScale as d3.ScaleTime<number, number>;
+          const x0 = timeScale.invert(mx);
+          const i = d3.bisector((d: ChartData) => new Date(d.date)).left(data, x0, 1);
+          const d0 = data[i - 1];
+          const d1 = data[i];
+          if (d0 && d1) {
+            d = (x0.getTime() - new Date(d0.date).getTime()) > (new Date(d1.date).getTime() - x0.getTime()) ? d1 : d0;
+          } else {
+            d = d0 || d1;
+          }
+        } else {
+          // Logic for Bar charts (band scale)
+          const bandScale = xScale as d3.ScaleBand<string>;
+          const domain = bandScale.domain();
+          const step = bandScale.step();
+          const index = Math.floor(mx / step);
+          if (index >= 0 && index < domain.length) {
+            const dateString = domain[index];
+            d = data.find(item => format(new Date(item.date), 'MMM d') === dateString);
+          }
+        }
 
-    if (metric2) {
-      const legend2 = legend.append('g')
-        .attr('transform', 'translate(100, 0)')
+        if (d) {
+          const xPos = 'invert' in xScale
+            ? (xScale as d3.ScaleTime<number, number>)(new Date(d.date))
+            : (xScale as d3.ScaleBand<string>)(format(new Date(d.date), 'MMM d'))! + (xScale as d3.ScaleBand<string>).bandwidth() / 2;
 
-      if (legendSymbol === 'line') {
-        legend2.append('line')
-          .attr('x1', 0)
-          .attr('x2', 20)
-          .attr('stroke', metric2.color)
-          .attr('stroke-width', 2)
-      } else {
-        legend2.append('rect')
-          .attr('width', 15)
-          .attr('height', 15)
-          .attr('fill', barColors?.[metric2.key]?.(data[0]?.[metric2.key] as number) || metric2.color)
-          .attr('opacity', 0.8)
-      }
+          focus.select('.x-hover-line').attr('transform', `translate(${xPos}, 0)`);
 
-      legend2.append('text')
-        .attr('x', 25)
-        .attr('y', legendSymbol === 'line' ? 4 : 12)
-        .text(metric2.label)
-        .attr('fill', '#64748b')
-        .style('font-size', '12px')
-    }
+          tooltip
+            .html(`<strong>${format(new Date(d.date), 'MMM d, yyyy')}</strong><br/>
+                       ${metric1.label}: ${metric1.format(d[metric1.key])}<br/>
+                       ${metric2 ? `${metric2.label}: ${metric2.format(d[metric2.key])}` : ''}`)
+            .style('left', (mx + margin.left + 15) + 'px')
+            .style('top', (my + margin.top - 28) + 'px');
+        }
+      });
+
   }, [data, metric1, metric2, currentChartType, barColors])
 
   return (
-    <Card className="p-4">
+    <Card className="p-4 relative">
       {!hideControls && (
         <div className="flex justify-end mb-4">
           <div className="inline-flex rounded-md shadow-sm" role="group">
@@ -286,12 +340,22 @@ export function MetricsChart({
             <button
               type="button"
               onClick={() => setCurrentChartType('bar')}
-              className={`px-4 py-2 text-sm font-medium border rounded-r-lg ${currentChartType === 'bar'
+              className={`px-4 py-2 text-sm font-medium border-t border-b ${currentChartType === 'bar'
                 ? 'bg-blue-50 text-blue-700 border-blue-700'
                 : 'bg-white text-gray-900 border-gray-200 hover:bg-gray-100'
                 }`}
             >
               Bar
+            </button>
+            <button
+              type="button"
+              onClick={() => setCurrentChartType('area')}
+              className={`px-4 py-2 text-sm font-medium border rounded-r-lg ${currentChartType === 'area'
+                ? 'bg-blue-50 text-blue-700 border-blue-700'
+                : 'bg-white text-gray-900 border-gray-200 hover:bg-gray-100'
+                }`}
+            >
+              Area
             </button>
           </div>
         </div>

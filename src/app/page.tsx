@@ -122,7 +122,11 @@ export default function DashboardPage() {
                                     key={key}
                                     label={config.label}
                                     value={config.format(totals[key as DisplayMetric], settings.currency)}
-                                    isSelected={selectedMetrics.includes(key as DisplayMetric)}
+                                    metricType={
+                                        selectedMetrics[0] === key ? 'primary' :
+                                        selectedMetrics[1] === key ? 'secondary' :
+                                        'none'
+                                    }
                                     onClick={() => handleMetricClick(key as DisplayMetric)}
                                 />
                             ))}

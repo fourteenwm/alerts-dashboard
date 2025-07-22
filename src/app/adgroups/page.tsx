@@ -14,7 +14,7 @@ import {
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { formatCurrency, formatNumber, formatPercent } from '@/lib/utils'
-import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
+import { MetricsChart } from '@/components/MetricsChart'
 import {
     TrendingUp,
     MousePointer,
@@ -302,63 +302,11 @@ export default function AdGroupsPage() {
                     </CardHeader>
                     <CardContent className="p-8">
                         {chartData.length > 0 ? (
-                            <ResponsiveContainer width="100%" height={400}>
-                                <LineChart data={chartData}>
-                                    <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
-                                    <XAxis
-                                        dataKey="date"
-                                        stroke="#64748b"
-                                        fontSize={12}
-                                        tickLine={false}
-                                        axisLine={false}
-                                    />
-                                    <YAxis
-                                        yAxisId="left"
-                                        stroke="#64748b"
-                                        fontSize={12}
-                                        tickLine={false}
-                                        axisLine={false}
-                                    />
-                                    <YAxis
-                                        yAxisId="right"
-                                        orientation="right"
-                                        stroke="#64748b"
-                                        fontSize={12}
-                                        tickLine={false}
-                                        axisLine={false}
-                                    />
-                                    <Tooltip
-                                        formatter={(value: any, name: any) => typeof value === 'number' ? (name === 'cost' || name === 'value' ? formatCurrency(value, settings.currency) : formatNumber(value)) : value}
-                                        contentStyle={{
-                                            backgroundColor: 'rgba(255, 255, 255, 0.95)',
-                                            border: 'none',
-                                            borderRadius: '12px',
-                                            boxShadow: '0 10px 25px rgba(0, 0, 0, 0.1)'
-                                        }}
-                                    />
-                                    <Legend />
-                                    <Line
-                                        yAxisId="left"
-                                        type="monotone"
-                                        dataKey="clicks"
-                                        stroke="#3b82f6"
-                                        strokeWidth={3}
-                                        dot={{ fill: '#3b82f6', strokeWidth: 2, r: 4 }}
-                                        activeDot={{ r: 6, stroke: '#3b82f6', strokeWidth: 2, fill: '#fff' }}
-                                        name="Clicks"
-                                    />
-                                    <Line
-                                        yAxisId="right"
-                                        type="monotone"
-                                        dataKey="cost"
-                                        stroke="#10b981"
-                                        strokeWidth={3}
-                                        dot={{ fill: '#10b981', strokeWidth: 2, r: 4 }}
-                                        activeDot={{ r: 6, stroke: '#10b981', strokeWidth: 2, fill: '#fff' }}
-                                        name="Cost"
-                                    />
-                                </LineChart>
-                            </ResponsiveContainer>
+                            <MetricsChart
+                                data={chartData}
+                                metric1={{ key: 'clicks', label: 'Clicks', color: '#3b82f6', format: (v) => formatNumber(v) }}
+                                metric2={{ key: 'cost', label: 'Cost', color: '#10b981', format: (v) => formatCurrency(v, settings.currency) }}
+                            />
                         ) : (
                             <div className="text-center py-20">
                                 <BarChart3 className="w-16 h-16 text-gray-300 mx-auto mb-4" />
