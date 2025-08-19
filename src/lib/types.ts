@@ -14,7 +14,52 @@ export interface Campaign {
   totalCost: number
 }
 
-// Daily campaign metrics
+// Dashboard metrics for non-LivCor accounts
+export interface DashboardMetric {
+  account: string
+  accountCode: string
+  wholeMonthMediaBudget: number
+  wholeMonthWithRollover: number
+  overUnder: number
+  monthProgress?: number
+}
+
+// Dashboard Live Core metrics for LivCor accounts
+export interface DashboardLiveCoreMetric {
+  account: string
+  accountCode: string
+  wholeMonthMediaBudget: number
+  wholeMonthWithRollover: number
+  overUnder: number
+  monthProgress?: number
+}
+
+// All Error Score Card metrics
+export interface AllErrorScoreCardMetric {
+  accountName: string
+  errorScore: number
+  average?: number
+  median?: number
+}
+
+// Broken Error Dashboard metrics
+export interface BrokenErrorDashboardMetric {
+  zeroSpenders: string
+  adsDisapprovals: number
+  assetDisapprovals: number
+  conversionIssues: number
+  noEndDates: number
+}
+
+// Soft Error Dashboard metrics
+export interface SoftErrorDashboardMetric {
+  negativeKeywordConflicts: number
+  impressionsOutsideCountry: number
+  displayAppsRunning: number
+  geoLocationUS: number
+}
+
+// Legacy interfaces for backward compatibility
 export interface AdMetric {
   campaign: string
   campaignId: string
@@ -26,7 +71,6 @@ export interface AdMetric {
   date: string
 }
 
-// Add the new AdGroupMetric interface
 export interface AdGroupMetric {
   campaign: string
   campaignId: string
@@ -45,7 +89,6 @@ export interface AdGroupMetric {
   roas: number
 }
 
-// Search term metrics - Core metrics from script
 export interface SearchTermMetric {
   searchTerm: string
   keywordText?: string
@@ -78,7 +121,7 @@ export type AllMetricKeys = MetricKey | keyof Omit<DailyMetrics, keyof AdMetric>
 
 export interface MetricOption {
   label: string
-  format: (val: number) => string
+  format: (val: string | number) => string
 }
 
 export interface MetricOptions {
@@ -103,11 +146,13 @@ export function isAdMetric(data: any): data is AdMetric {
   return 'campaignId' in data && 'impr' in data
 }
 
-// Combined tab data type
+// Combined tab data type for alerts
 export type TabData = {
-  daily: AdMetric[]
-  searchTerms: SearchTermMetric[]
-  adGroups: AdGroupMetric[]
+  'Dashboard': DashboardMetric[]
+  'Dashboard LivCor': DashboardLiveCoreMetric[]
+  'All Error Score Card': AllErrorScoreCardMetric[]
+  'Broken Error Dashboard': BrokenErrorDashboardMetric[]
+  'Soft Error Dashboard': SoftErrorDashboardMetric[]
 }
 
 // Helper type to get numeric values from metrics

@@ -1,12 +1,93 @@
 // src/lib/sheetsData.ts
-import { AdMetric, Campaign, SearchTermMetric, TabData, AdGroupMetric } from './types'
+import { 
+  DashboardMetric, 
+  DashboardLiveCoreMetric, 
+  AllErrorScoreCardMetric, 
+  BrokenErrorDashboardMetric, 
+  SoftErrorDashboardMetric, 
+  TabData 
+} from './types'
 import { SHEET_TABS, SheetTab, TAB_CONFIGS, DEFAULT_WEB_APP_URL } from './config'
 
-// Helper to fetch and parse SearchTerm data
-async function fetchAndParseSearchTerms(sheetUrl: string): Promise<SearchTermMetric[]> {
-  const tab: SheetTab = 'searchTerms';
+// Helper to fetch and parse Dashboard data (non-LivCor accounts)
+async function fetchAndParseDashboard(sheetUrl: string): Promise<DashboardMetric[]> {
+  const tab: SheetTab = 'Dashboard';
   try {
-    const urlWithTab = `${sheetUrl}?tab=${tab}`;
+    const urlWithTab = `${sheetUrl}?tab=${encodeURIComponent(tab)}`;
+    const response = await fetch(urlWithTab);
+    if (!response.ok) {
+      throw new Error(`Failed to fetch data for tab ${tab}`);
+    }
+    const rawData = await response.json();
+    if (!Array.isArray(rawData)) {
+      console.error(`Response is not an array for ${tab}:`, rawData);
+      return [];
+    }
+    
+    // Extract month progress from first row with data in "Percent Through Month" column
+    const monthProgress = rawData.length > 0 ? Number(rawData[0]['Percent Through Month'] || 0) * 100 : 0;
+    
+    return rawData
+      .filter((row: any) => {
+        const account = String(row['Account'] || '').trim();
+        return account !== '' && account !== 'null' && account !== 'undefined';
+      })
+      .map((row: any) => ({
+        account: String(row['Account'] || ''),
+        accountCode: String(row['Account Code'] || ''),
+        wholeMonthMediaBudget: Number(row['% Whole Month Media Budget'] || 0) * 100,
+        wholeMonthWithRollover: Number(row['% Whole Month w/Rollover'] || 0) * 100,
+        overUnder: Number(row['% Over Under'] || 0) * 100,
+        monthProgress: monthProgress,
+      }));
+  } catch (error) {
+    console.error(`Error fetching ${tab} data:`, error);
+    return [];
+  }
+}
+
+// Helper to fetch and parse Dashboard LivCor data (LivCor accounts)
+async function fetchAndParseDashboardLiveCore(sheetUrl: string): Promise<DashboardLiveCoreMetric[]> {
+  const tab: SheetTab = 'Dashboard LivCor';
+  try {
+    const urlWithTab = `${sheetUrl}?tab=${encodeURIComponent(tab)}`;
+    const response = await fetch(urlWithTab);
+    if (!response.ok) {
+      throw new Error(`Failed to fetch data for tab ${tab}`);
+    }
+    const rawData = await response.json();
+    if (!Array.isArray(rawData)) {
+      console.error(`Response is not an array for ${tab}:`, rawData);
+      return [];
+    }
+    
+    // Extract month progress from first row with data in "Percent Through Month" column
+    const monthProgress = rawData.length > 0 ? Number(rawData[0]['Percent Through Month'] || 0) * 100 : 0;
+    
+    return rawData
+      .filter((row: any) => {
+        const account = String(row['Account'] || '').trim();
+        return account !== '' && account !== 'null' && account !== 'undefined';
+      })
+      .map((row: any) => ({
+        account: String(row['Account'] || ''),
+        accountCode: String(row['Account Code'] || ''),
+        wholeMonthMediaBudget: Number(row['% Whole Month Media Budget'] || 0) * 100,
+        wholeMonthWithRollover: Number(row['% Whole Month w/Rollover'] || 0) * 100,
+        overUnder: Number(row['% Over Under'] || 0) * 100,
+        monthProgress: monthProgress,
+      }));
+  } catch (error) {
+    console.error(`Error fetching ${tab} data:`, error);
+    return [];
+  }
+}
+
+// Helper to fetch and parse All Error Score Card data
+async function fetchAndParseAllErrorScoreCard(sheetUrl: string): Promise<AllErrorScoreCardMetric[]> {
+  const tab: SheetTab = 'All Error Score Card';
+  try {
+    const urlWithTab = `${sheetUrl}?tab=${encodeURIComponent(tab)}`;
     const response = await fetch(urlWithTab);
     if (!response.ok) {
       throw new Error(`Failed to fetch data for tab ${tab}`);
@@ -17,15 +98,10 @@ async function fetchAndParseSearchTerms(sheetUrl: string): Promise<SearchTermMet
       return [];
     }
     return rawData.map((row: any) => ({
-      searchTerm: String(row['searchTerm'] || ''),
-      keywordText: String(row['keywordText'] || ''),
-      campaign: String(row['campaign'] || ''),
-      adGroup: String(row['adGroup'] || ''),
-      impr: Number(row['impr'] || 0),
-      clicks: Number(row['clicks'] || 0),
-      cost: Number(row['cost'] || 0),
-      conv: Number(row['conv'] || 0),
-      value: Number(row['value'] || 0),
+      accountName: String(row['Account Name'] || ''),
+      errorScore: Number(row['Final Error Score'] || 0),
+      average: row['Average'] ? Number(row['Average']) : undefined,
+      median: row['Median'] ? Number(row['Median']) : undefined,
     }));
   } catch (error) {
     console.error(`Error fetching ${tab} data:`, error);
@@ -33,11 +109,11 @@ async function fetchAndParseSearchTerms(sheetUrl: string): Promise<SearchTermMet
   }
 }
 
-// Helper to fetch and parse AdGroup data
-async function fetchAndParseAdGroups(sheetUrl: string): Promise<AdGroupMetric[]> {
-  const tab: SheetTab = 'adGroups';
+// Helper to fetch and parse Broken Error Dashboard data
+async function fetchAndParseBrokenErrorDashboard(sheetUrl: string): Promise<BrokenErrorDashboardMetric[]> {
+  const tab: SheetTab = 'Broken Error Dashboard';
   try {
-    const urlWithTab = `${sheetUrl}?tab=${tab}`;
+    const urlWithTab = `${sheetUrl}?tab=${encodeURIComponent(tab)}`;
     const response = await fetch(urlWithTab);
     if (!response.ok) {
       throw new Error(`Failed to fetch data for tab ${tab}`);
@@ -48,21 +124,11 @@ async function fetchAndParseAdGroups(sheetUrl: string): Promise<AdGroupMetric[]>
       return [];
     }
     return rawData.map((row: any) => ({
-      campaign: String(row['campaign'] || ''),
-      campaignId: String(row['campaignId'] || ''),
-      adGroup: String(row['adGroup'] || ''),
-      adGroupId: String(row['adGroupId'] || ''),
-      clicks: Number(row['clicks'] || 0),
-      value: Number(row['value'] || 0),
-      conv: Number(row['conv'] || 0),
-      cost: Number(row['cost'] || 0),
-      impr: Number(row['impr'] || 0),
-      date: String(row['date'] || ''),
-      cpc: Number(row['cpc'] || 0),
-      ctr: Number(row['ctr'] || 0),
-      convRate: Number(row['convRate'] || 0),
-      cpa: Number(row['cpa'] || 0),
-      roas: Number(row['roas'] || 0)
+      zeroSpenders: String(row['Zero Spenders'] || ''),
+      adsDisapprovals: Number(row['Ads Disapprovals'] || 0),
+      assetDisapprovals: Number(row['Asset Disapprovals'] || 0),
+      conversionIssues: Number(row['Conversion Issues'] || 0),
+      noEndDates: Number(row['No End Dates'] || 0),
     }));
   } catch (error) {
     console.error(`Error fetching ${tab} data:`, error);
@@ -70,11 +136,11 @@ async function fetchAndParseAdGroups(sheetUrl: string): Promise<AdGroupMetric[]>
   }
 }
 
-// Helper to fetch and parse Daily (AdMetric) data
-async function fetchAndParseDaily(sheetUrl: string): Promise<AdMetric[]> {
-  const tab: SheetTab = 'daily';
+// Helper to fetch and parse Soft Error Dashboard data
+async function fetchAndParseSoftErrorDashboard(sheetUrl: string): Promise<SoftErrorDashboardMetric[]> {
+  const tab: SheetTab = 'Soft Error Dashboard';
   try {
-    const urlWithTab = `${sheetUrl}?tab=${tab}`;
+    const urlWithTab = `${sheetUrl}?tab=${encodeURIComponent(tab)}`;
     const response = await fetch(urlWithTab);
     if (!response.ok) {
       throw new Error(`Failed to fetch data for tab ${tab}`);
@@ -85,14 +151,10 @@ async function fetchAndParseDaily(sheetUrl: string): Promise<AdMetric[]> {
       return [];
     }
     return rawData.map((row: any) => ({
-      campaign: String(row['campaign'] || ''),
-      campaignId: String(row['campaignId'] || ''),
-      clicks: Number(row['clicks'] || 0),
-      value: Number(row['value'] || 0),
-      conv: Number(row['conv'] || 0),
-      cost: Number(row['cost'] || 0),
-      impr: Number(row['impr'] || 0),
-      date: String(row['date'] || '')
+      negativeKeywordConflicts: Number(row['Negative Keyword Conflicts'] || 0),
+      impressionsOutsideCountry: Number(row['Impressions Outside Country'] || 0),
+      displayAppsRunning: Number(row['Display Apps Running'] || 0),
+      geoLocationUS: Number(row['Geo Location "United States"'] || 0),
     }));
   } catch (error) {
     console.error(`Error fetching ${tab} data:`, error);
@@ -101,46 +163,37 @@ async function fetchAndParseDaily(sheetUrl: string): Promise<AdMetric[]> {
 }
 
 export async function fetchAllTabsData(sheetUrl: string = DEFAULT_WEB_APP_URL): Promise<TabData> {
-  const [dailyData, searchTermsData, adGroupsData] = await Promise.all([
-    fetchAndParseDaily(sheetUrl),
-    fetchAndParseSearchTerms(sheetUrl),
-    fetchAndParseAdGroups(sheetUrl)
+  const [dashboardData, dashboardLiveCoreData, allErrorScoreCardData, brokenErrorDashboardData, softErrorDashboardData] = await Promise.all([
+    fetchAndParseDashboard(sheetUrl),
+    fetchAndParseDashboardLiveCore(sheetUrl),
+    fetchAndParseAllErrorScoreCard(sheetUrl),
+    fetchAndParseBrokenErrorDashboard(sheetUrl),
+    fetchAndParseSoftErrorDashboard(sheetUrl)
   ]);
 
   return {
-    daily: dailyData || [],
-    searchTerms: searchTermsData || [],
-    adGroups: adGroupsData || [],
+    'Dashboard': dashboardData || [],
+    'Dashboard LivCor': dashboardLiveCoreData || [],
+    'All Error Score Card': allErrorScoreCardData || [],
+    'Broken Error Dashboard': brokenErrorDashboardData || [],
+    'Soft Error Dashboard': softErrorDashboardData || [],
   } as TabData;
 }
 
-export function getCampaigns(data: AdMetric[]): Campaign[] {
-  const campaignMap = new Map<string, { id: string; name: string; totalCost: number }>()
-
-  data.forEach(row => {
-    if (!campaignMap.has(row.campaignId)) {
-      campaignMap.set(row.campaignId, {
-        id: row.campaignId,
-        name: row.campaign,
-        totalCost: row.cost
-      })
-    } else {
-      const campaign = campaignMap.get(row.campaignId)!
-      campaign.totalCost += row.cost
-    }
-  })
-
-  return Array.from(campaignMap.values())
-    .sort((a, b) => b.totalCost - a.totalCost) // Sort by cost descending
+// Legacy functions for backward compatibility
+export function getCampaigns(data: any[]): any[] {
+  // This function is no longer relevant for alerts data
+  // Keeping for backward compatibility
+  return [];
 }
 
-export function getMetricsByDate(data: AdMetric[], campaignId: string): AdMetric[] {
-  return data
-    .filter(metric => metric.campaignId === campaignId)
-    .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime())
+export function getMetricsByDate(data: any[], campaignId: string): any[] {
+  // This function is no longer relevant for alerts data
+  // Keeping for backward compatibility
+  return [];
 }
 
-export function getMetricOptions(activeTab: SheetTab = 'daily') {
+export function getMetricOptions(activeTab: SheetTab = 'Dashboard') {
   return TAB_CONFIGS[activeTab]?.metrics || {}
 }
 
