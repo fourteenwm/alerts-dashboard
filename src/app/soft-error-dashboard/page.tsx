@@ -7,14 +7,27 @@ import { MetricCard } from '@/components/MetricCard'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { Info } from 'lucide-react'
+import { COLORS } from '@/lib/config'
+
+function DashboardLayout({ children, error }: { children: React.ReactNode, error?: string }) {
+  return (
+    <div className="container mx-auto px-4 py-12 mt-16">
+      <div className="flex justify-between items-center mb-8">
+        <h1 className="text-3xl font-bold" style={{ color: COLORS.primary }}>Soft Error Dashboard</h1>
+      </div>
+      {error && <div className="text-red-500 mb-4">{error}</div>}
+      {children}
+    </div>
+  )
+}
 
 export default function SoftErrorDashboardPage() {
   const { settings, fetchedData, dataError, isDataLoading } = useSettings()
   const [errorData, setErrorData] = useState<SoftErrorDashboardMetric[]>([])
 
   useEffect(() => {
-    if (fetchedData?.softErrorDashboard) {
-      setErrorData(fetchedData.softErrorDashboard)
+    if (fetchedData?.['Soft Error Dashboard']) {
+      setErrorData(fetchedData['Soft Error Dashboard'])
     }
   }, [fetchedData])
 
@@ -110,18 +123,6 @@ export default function SoftErrorDashboardPage() {
         </Card>
       </div>
     </DashboardLayout>
-  )
-}
-
-function DashboardLayout({ children, error }: { children: React.ReactNode, error?: string }) {
-  return (
-    <div className="container mx-auto px-4 py-12 mt-16">
-      <div className="flex justify-between items-center mb-8">
-        <h1 className="text-3xl font-bold text-gray-900">Soft Error Dashboard</h1>
-      </div>
-      {error && <div className="text-red-500 mb-4">{error}</div>}
-      {children}
-    </div>
   )
 }
 

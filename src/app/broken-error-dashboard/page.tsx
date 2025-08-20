@@ -7,14 +7,27 @@ import { MetricCard } from '@/components/MetricCard'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { AlertTriangle, AlertCircle } from 'lucide-react'
+import { COLORS } from '@/lib/config'
+
+function DashboardLayout({ children, error }: { children: React.ReactNode, error?: string }) {
+  return (
+    <div className="container mx-auto px-4 py-12 mt-16">
+      <div className="flex justify-between items-center mb-8">
+        <h1 className="text-3xl font-bold" style={{ color: COLORS.primary }}>Broken Error Dashboard</h1>
+      </div>
+      {error && <div className="text-red-500 mb-4">{error}</div>}
+      {children}
+    </div>
+  )
+}
 
 export default function BrokenErrorDashboardPage() {
   const { settings, fetchedData, dataError, isDataLoading } = useSettings()
   const [errorData, setErrorData] = useState<BrokenErrorDashboardMetric[]>([])
 
   useEffect(() => {
-    if (fetchedData?.brokenErrorDashboard) {
-      setErrorData(fetchedData.brokenErrorDashboard)
+    if (fetchedData?.['Broken Error Dashboard']) {
+      setErrorData(fetchedData['Broken Error Dashboard'])
     }
   }, [fetchedData])
 
@@ -118,18 +131,6 @@ export default function BrokenErrorDashboardPage() {
         </Card>
       </div>
     </DashboardLayout>
-  )
-}
-
-function DashboardLayout({ children, error }: { children: React.ReactNode, error?: string }) {
-  return (
-    <div className="container mx-auto px-4 py-12 mt-16">
-      <div className="flex justify-between items-center mb-8">
-        <h1 className="text-3xl font-bold text-gray-900">Broken Error Dashboard</h1>
-      </div>
-      {error && <div className="text-red-500 mb-4">{error}</div>}
-      {children}
-    </div>
   )
 }
 
