@@ -13,6 +13,7 @@ export type SettingsContextType = {
   setCurrency: (currency: string) => void
   setSelectedCampaign: (campaignId: string) => void
   fetchedData: TabData | undefined
+  dataStore: TabData | undefined
   dataError: any
   isDataLoading: boolean
   refreshData: () => void
@@ -23,7 +24,7 @@ const defaultSettings: Settings = {
   sheetUrl: DEFAULT_WEB_APP_URL,
   currency: '$',
   selectedCampaign: undefined,
-  activeTab: 'daily'
+  activeTab: 'Dashboard'
 }
 
 const SettingsContext = createContext<SettingsContextType | undefined>(undefined)
@@ -70,6 +71,7 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
       setCurrency,
       setSelectedCampaign,
       fetchedData,
+      dataStore: fetchedData,
       dataError,
       isDataLoading,
       refreshData: () => refreshData(),
@@ -86,4 +88,15 @@ export function useSettings() {
     throw new Error('useSettings must be used within a SettingsProvider')
   }
   return context
+}
+
+export function useDataStore() {
+  const context = useContext(SettingsContext)
+  if (context === undefined) {
+    throw new Error('useDataStore must be used within a SettingsProvider')
+  }
+  return {
+    dataStore: context.dataStore,
+    settings: context.settings
+  }
 } 

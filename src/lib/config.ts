@@ -27,49 +27,49 @@ export const TAB_CONFIGS: Record<SheetTab, TabConfig> = {
     'Dashboard': {
         name: 'Dashboard',
         metrics: {
-            account: { label: 'Account', format: (val: string) => val },
-            accountCode: { label: 'Account Code', format: (val: string) => val },
-            wholeMonthMediaBudget: { label: '% Whole Month Media Budget', format: (val: number) => `${val.toFixed(2)}%` },
-            wholeMonthWithRollover: { label: '% Whole Month w/Rollover', format: (val: number) => `${val.toFixed(2)}%` },
-            overUnder: { label: '% Over Under', format: (val: number) => `${val.toFixed(2)}%` }
+            account: { label: 'Account', format: (val: any) => String(val) },
+            accountCode: { label: 'Account Code', format: (val: any) => String(val) },
+            wholeMonthMediaBudget: { label: '% Whole Month Media Budget', format: (val: any) => `${Number(val).toFixed(2)}%` },
+            wholeMonthWithRollover: { label: '% Whole Month w/Rollover', format: (val: any) => `${Number(val).toFixed(2)}%` },
+            overUnder: { label: '% Over Under', format: (val: any) => `${Number(val).toFixed(2)}%` }
         }
     },
     'Dashboard LivCor': {
         name: 'Dashboard LivCor',
         metrics: {
-            account: { label: 'Account', format: (val: string) => val },
-            accountCode: { label: 'Account Code', format: (val: string) => val },
-            wholeMonthMediaBudget: { label: '% Whole Month Media Budget', format: (val: number) => `${val.toFixed(2)}%` },
-            wholeMonthWithRollover: { label: '% Whole Month w/Rollover', format: (val: number) => `${val.toFixed(2)}%` },
-            overUnder: { label: '% Over Under', format: (val: number) => `${val.toFixed(2)}%` }
+            account: { label: 'Account', format: (val: any) => String(val) },
+            accountCode: { label: 'Account Code', format: (val: any) => String(val) },
+            wholeMonthMediaBudget: { label: '% Whole Month Media Budget', format: (val: any) => `${Number(val).toFixed(2)}%` },
+            wholeMonthWithRollover: { label: '% Whole Month w/Rollover', format: (val: any) => `${Number(val).toFixed(2)}%` },
+            overUnder: { label: '% Over Under', format: (val: any) => `${Number(val).toFixed(2)}%` }
         }
     },
     'All Error Score Card': {
         name: 'All Error Score Card',
         metrics: {
-            accountName: { label: 'Account Name', format: (val: string) => val },
-            errorScore: { label: 'Error Score', format: (val: number) => val.toFixed(1) },
-            average: { label: 'Average', format: (val: number) => val.toFixed(2) },
-            median: { label: 'Median', format: (val: number) => val.toFixed(1) }
+            accountName: { label: 'Account Name', format: (val: any) => String(val) },
+            errorScore: { label: 'Error Score', format: (val: any) => Number(val).toFixed(1) },
+            average: { label: 'Average', format: (val: any) => Number(val).toFixed(2) },
+            median: { label: 'Median', format: (val: any) => Number(val).toFixed(1) }
         }
     },
     'Broken Error Dashboard': {
         name: 'Broken Error Dashboard',
         metrics: {
-            zeroSpenders: { label: 'Zero Spenders', format: (val: string) => val },
-            adsDisapprovals: { label: 'Ads Disapprovals', format: (val: number) => val.toString() },
-            assetDisapprovals: { label: 'Asset Disapprovals', format: (val: number) => val.toString() },
-            conversionIssues: { label: 'Conversion Issues', format: (val: number) => val.toString() },
-            noEndDates: { label: 'No End Dates', format: (val: number) => val.toString() }
+            zeroSpenders: { label: 'Zero Spenders', format: (val: any) => String(val) },
+            adsDisapprovals: { label: 'Ads Disapprovals', format: (val: any) => Number(val).toString() },
+            assetDisapprovals: { label: 'Asset Disapprovals', format: (val: any) => Number(val).toString() },
+            conversionIssues: { label: 'Conversion Issues', format: (val: any) => Number(val).toString() },
+            noEndDates: { label: 'No End Dates', format: (val: any) => Number(val).toString() }
         }
     },
     'Soft Error Dashboard': {
         name: 'Soft Error Dashboard',
         metrics: {
-            negativeKeywordConflicts: { label: 'Negative Keyword Conflicts', format: (val: number) => val.toString() },
-            impressionsOutsideCountry: { label: 'Impressions Outside Country', format: (val: number) => val.toString() },
-            displayAppsRunning: { label: 'Display Apps Running', format: (val: number) => val.toString() },
-            geoLocationUS: { label: 'Geo Location "United States"', format: (val: number) => val.toString() }
+            negativeKeywordConflicts: { label: 'Negative Keyword Conflicts', format: (val: any) => Number(val).toString() },
+            impressionsOutsideCountry: { label: 'Impressions Outside Country', format: (val: any) => Number(val).toString() },
+            displayAppsRunning: { label: 'Display Apps Running', format: (val: any) => Number(val).toString() },
+            geoLocationUS: { label: 'Geo Location "United States"', format: (val: any) => Number(val).toString() }
         }
     }
 } 

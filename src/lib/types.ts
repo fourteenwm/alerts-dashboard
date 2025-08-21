@@ -121,7 +121,7 @@ export type AllMetricKeys = MetricKey | keyof Omit<DailyMetrics, keyof AdMetric>
 
 export interface MetricOption {
   label: string
-  format: (val: string | number) => string
+  format: (val: any) => string
 }
 
 export interface MetricOptions {
@@ -153,7 +153,94 @@ export type TabData = {
   'All Error Score Card': AllErrorScoreCardMetric[]
   'Broken Error Dashboard': BrokenErrorDashboardMetric[]
   'Soft Error Dashboard': SoftErrorDashboardMetric[]
+  [key: string]: any[] // Allow additional string keys for flexibility
 }
 
 // Helper type to get numeric values from metrics
 export type MetricValue<T> = T extends number ? T : never 
+
+// Data Insights Types
+export type ColumnType = 'metric' | 'dimension' | 'date'
+
+export interface ColumnDefinition {
+  name: string
+  displayName: string
+  type: ColumnType
+  originalName: string
+}
+
+export interface FilterCondition {
+  id: string
+  column: string
+  operator: string
+  value: string | number | Date
+}
+
+export interface SortConfig {
+  column: string
+  direction: 'asc' | 'desc'
+}
+
+export interface DataSummary {
+  totalRows: number
+  metrics: {
+    [columnName: string]: {
+      min: number
+      max: number
+      avg: number
+      sum: number
+    }
+  }
+  dimensions: {
+    [columnName: string]: {
+      uniqueCount: number
+      topValues?: Array<{
+        value: string
+        count: number
+        metrics?: { [key: string]: number }
+      }>
+    }
+  }
+}
+
+export type LLMProvider = 'gemini-pro' | 'openai-gpt-4' | 'anthropic-claude-3'
+
+export interface TokenUsage {
+  inputTokens: number
+  outputTokens: number
+  totalTokens: number
+}
+
+export interface LLMResponse {
+  text: string
+  tokenUsage?: TokenUsage
+  error?: string
+}
+
+export interface InsightRequest {
+  prompt: string
+  data: any[]
+  dataSource: string
+  filters: FilterCondition[]
+  totalRows: number
+  filteredRows: number
+  currency: string
+  provider: LLMProvider
+}
+
+// Data source configuration
+export interface DataSourceConfig {
+  id: string
+  name: string
+  description: string
+  available: boolean
+}
+
+// Available filter operators by column type
+export const FILTER_OPERATORS = {
+  dimension: ['contains', 'does not contain', 'equals', 'not equals', 'starts with', 'ends with'],
+  metric: ['equals', 'not equals', 'greater than', 'less than', 'greater than or equals', 'less than or equals'],
+  date: ['equals', 'not equals', 'after', 'before', 'on or after', 'on or before']
+} as const
+
+export type FilterOperator = typeof FILTER_OPERATORS[keyof typeof FILTER_OPERATORS][number] 

@@ -70,6 +70,16 @@ export function Navigation() {
                         >
                             Soft Errors
                         </Link>
+                        <Link
+                            href="/data-insights"
+                            className={cn(
+                                "text-sm font-medium transition-colors hover:text-foreground/80",
+                                pathname === "/data-insights" ? "text-foreground" : "text-foreground/60"
+                            )}
+                            style={{ color: pathname === "/data-insights" ? COLORS.primary : COLORS.darkGrey }}
+                        >
+                            Data Insights
+                        </Link>
                     </div>
                     <Link
                         href="/settings"

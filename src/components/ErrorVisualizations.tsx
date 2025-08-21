@@ -323,7 +323,7 @@ export function CriticalAccountsList({ data }: CriticalAccountsListProps) {
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
-              <span>Critical Priority Accounts (Score > 6)</span>
+              <span>Critical Priority Accounts (Score &gt; 6)</span>
               <Badge variant="destructive">{criticalAccounts.length}</Badge>
             </CardTitle>
           </CardHeader>

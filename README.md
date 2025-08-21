@@ -1,5 +1,3 @@
-# Mike Rhodes - Build the Agent - Quick Template v1
-
 This is a template project for builders to create applications with AI.
 
 ## Getting started
