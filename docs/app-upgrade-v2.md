@@ -97,37 +97,37 @@ Transform the current single-tab insights functionality into a multi-data source
 
 ### UI1: Data Source Selection Panel
 ```
-┌─────────────────────────────────────────┐
-│ Select Data Sources for Analysis        │
-├─────────────────────────────────────────┤
-│ □ Dashboard Non-LivCor Accounts        │
-│ ☑ Dashboard LivCor Accounts (default)  │
-│ □ All Error Score Card                 │
-│ □ Broken Error Dashboard               │
-│ □ Soft Error Dashboard                 │
-├─────────────────────────────────────────┤
-│ [Select All] [Clear All]               │
-└─────────────────────────────────────────┘
++-----------------------------------------+
+¦ Select Data Sources for Analysis        ¦
++-----------------------------------------¦
+¦ ? Dashboard Non-LivCor Accounts        ¦
+¦ ? Dashboard LivCor Accounts (default)  ¦
+¦ ? All Error Score Card                 ¦
+¦ ? Broken Error Dashboard               ¦
+¦ ? Soft Error Dashboard                 ¦
++-----------------------------------------¦
+¦ [Select All] [Clear All]               ¦
++-----------------------------------------+
 ```
 
 ### UI2: Data Volume Control
 ```
-┌─────────────────────────────────────────┐
-│ Data Rows per Source: [500 ▼]          │
-│ Estimated Total Rows: 500               │
-│ ⚠ Large datasets may take longer        │
-└─────────────────────────────────────────┘
++-----------------------------------------+
+¦ Data Rows per Source: [500 ?]          ¦
+¦ Estimated Total Rows: 500               ¦
+¦ ? Large datasets may take longer        ¦
++-----------------------------------------+
 ```
 
 ### UI3: Analysis Status
 ```
-┌─────────────────────────────────────────┐
-│ Analyzing data from:                    │
-│ • Dashboard LivCor Accounts (500 rows) │
-│ • All Error Score Card (250 rows)      │
-│                                         │
-│ [◐] Processing insights...              │
-└─────────────────────────────────────────┘
++-----------------------------------------+
+¦ Analyzing data from:                    ¦
+¦ • Dashboard LivCor Accounts (500 rows) ¦
+¦ • All Error Score Card (250 rows)      ¦
+¦                                         ¦
+¦ [?] Processing insights...              ¦
++-----------------------------------------+
 ```
 
 ## Implementation Plan

@@ -13,13 +13,14 @@ import { useDataStore } from '@/lib/contexts/SettingsContext'
 
 export function useDataInsights() {
   // State management
-  const [selectedDataSource, setSelectedDataSource] = useState<string>('')
+  const [selectedDataSources, setSelectedDataSources] = useState<string[]>([])
   const [columns, setColumns] = useState<ColumnDefinition[]>([])
   const [filters, setFilters] = useState<FilterCondition[]>([])
   const [sortConfig, setSortConfig] = useState<SortConfig>({ column: '', direction: 'asc' })
   const [previewRowCount, setPreviewRowCount] = useState<number>(10)
+  const [rowLimitPerSource, setRowLimitPerSource] = useState<number>(500)
   const [userPrompt, setUserPrompt] = useState<string>('')
-  const [selectedLLM, setSelectedLLM] = useState<LLMProvider>('gemini-pro')
+  const [selectedLLM, setSelectedLLM] = useState<LLMProvider>('openai-gpt-4')
   const [aiResponse, setAiResponse] = useState<LLMResponse | null>(null)
   const [isGeneratingInsights, setIsGeneratingInsights] = useState<boolean>(false)
   const [error, setError] = useState<string>('')
@@ -27,7 +28,7 @@ export function useDataInsights() {
   // Get data from global store
   const { dataStore, settings } = useDataStore()
 
-  // Available data sources
+  // Available data sources with selection state
   const availableDataSources = useMemo(() => {
     if (!dataStore) return []
     
@@ -35,61 +36,88 @@ export function useDataInsights() {
       id: key,
       name: key,
       description: `${key} data (${data.length} rows)`,
-      available: data.length > 0
+      available: data.length > 0,
+      selected: selectedDataSources.includes(key),
+      rowCount: data.length
     }))
-  }, [dataStore])
+  }, [dataStore, selectedDataSources])
 
-  // Set default data source on mount
+  // Set default data source on mount (Dashboard LivCor as per PRD)
   useMemo(() => {
-    if (availableDataSources.length > 0 && !selectedDataSource) {
-      const defaultSource = availableDataSources.find(ds => ds.available)
-      if (defaultSource) {
-        setSelectedDataSource(defaultSource.id)
-      }
-    }
-  }, [availableDataSources, selectedDataSource])
-
-  // Derive columns from selected data source
-  useMemo(() => {
-    if (!selectedDataSource || !dataStore?.[selectedDataSource]) {
-      setColumns([])
-      return
-    }
-
-    const data = dataStore[selectedDataSource]
-    if (data.length === 0) {
-      setColumns([])
-      return
-    }
-
-    const sampleRow = data[0]
-    const derivedColumns: ColumnDefinition[] = Object.entries(sampleRow).map(([key, value]) => {
-      let type: 'metric' | 'dimension' | 'date' = 'dimension'
-      
-      if (typeof value === 'number') {
-        type = 'metric'
-      } else if (typeof value === 'string') {
-        if (key.toLowerCase().includes('date') || /^\d{4}-\d{2}-\d{2}/.test(value)) {
-          type = 'date'
+    if (availableDataSources.length > 0 && selectedDataSources.length === 0) {
+      const livCorSource = availableDataSources.find(ds => ds.id === 'Dashboard LivCor' && ds.available)
+      if (livCorSource) {
+        setSelectedDataSources([livCorSource.id])
+      } else {
+        // Fallback to first available source if LivCor not available
+        const defaultSource = availableDataSources.find(ds => ds.available)
+        if (defaultSource) {
+          setSelectedDataSources([defaultSource.id])
         }
       }
+    }
+  }, [availableDataSources, selectedDataSources])
 
-      return {
-        name: key,
-        displayName: key.replace(/([A-Z])/g, ' $1').replace(/^./, str => str.toUpperCase()),
-        type,
-        originalName: key
+  // Derive columns from selected data sources (combined schema)
+  useMemo(() => {
+    if (selectedDataSources.length === 0 || !dataStore) {
+      setColumns([])
+      return
+    }
+
+    // Collect all unique columns from selected data sources
+    const allColumns = new Map<string, ColumnDefinition>()
+    
+    selectedDataSources.forEach(sourceId => {
+      const data = dataStore[sourceId]
+      if (data && data.length > 0) {
+        const sampleRow = data[0]
+        Object.entries(sampleRow).forEach(([key, value]) => {
+          if (!allColumns.has(key)) {
+            let type: 'metric' | 'dimension' | 'date' = 'dimension'
+            
+            if (typeof value === 'number') {
+              type = 'metric'
+            } else if (typeof value === 'string') {
+              if (key.toLowerCase().includes('date') || /^\d{4}-\d{2}-\d{2}/.test(value)) {
+                type = 'date'
+              }
+            }
+
+            allColumns.set(key, {
+              name: key,
+              displayName: key.replace(/([A-Z])/g, ' $1').replace(/^./, str => str.toUpperCase()),
+              type,
+              originalName: key
+            })
+          }
+        })
       }
     })
 
-    setColumns(derivedColumns)
-  }, [selectedDataSource, dataStore])
+    setColumns(Array.from(allColumns.values()))
+  }, [selectedDataSources, dataStore])
 
-  // Filter and sort data
+  // Combine, filter and sort data from multiple sources
   const filteredAndSortedData = useMemo(() => {
-    if (!selectedDataSource || !dataStore?.[selectedDataSource]) return []
+    if (selectedDataSources.length === 0 || !dataStore) return []
 
-    let data = [...dataStore[selectedDataSource]]
+    // Combine data from all selected sources with row limiting
+    let combinedData: any[] = []
+    
+    selectedDataSources.forEach(sourceId => {
+      const sourceData = dataStore[sourceId]
+      if (sourceData && sourceData.length > 0) {
+        // Apply row limit per source
+        const limitedData = sourceData.slice(0, rowLimitPerSource).map(row => ({
+          ...row,
+          __dataSource: sourceId // Add source identifier
+        }))
+        combinedData = [...combinedData, ...limitedData]
+      }
+    })
+
+    let data = combinedData
 
     // Apply filters
     if (filters.length > 0) {
@@ -156,17 +184,24 @@ export function useDataInsights() {
     }
 
     return data
-  }, [selectedDataSource, dataStore, filters, sortConfig])
+  }, [selectedDataSources, dataStore, filters, sortConfig, rowLimitPerSource])
 
   // Preview data (limited rows)
   const previewData = useMemo(() => {
     return filteredAndSortedData.slice(0, previewRowCount)
   }, [filteredAndSortedData, previewRowCount])
 
-  // Calculate data summary
+  // Calculate data summary with multi-source support
   const dataSummary = useMemo((): DataSummary => {
+    const estimatedTotal = selectedDataSources.reduce((total, sourceId) => {
+      const sourceData = dataStore?.[sourceId]
+      return total + (sourceData ? Math.min(sourceData.length, rowLimitPerSource) : 0)
+    }, 0)
+
     const summary: DataSummary = {
       totalRows: filteredAndSortedData.length,
+      estimatedTotalRows: estimatedTotal,
+      selectedSources: selectedDataSources,
       metrics: {},
       dimensions: {}
     }
@@ -211,7 +246,7 @@ export function useDataInsights() {
     })
 
     return summary
-  }, [filteredAndSortedData, columns])
+  }, [filteredAndSortedData, columns, selectedDataSources, dataStore, rowLimitPerSource])
 
   // Filter management
   const addFilter = useCallback(() => {
@@ -246,7 +281,7 @@ export function useDataInsights() {
     }))
   }, [])
 
-  // AI Insights generation
+  // AI Insights generation with multi-source support
   const generateInsights = useCallback(async () => {
     if (!userPrompt.trim() || filteredAndSortedData.length === 0) {
       setError('Please enter a prompt and ensure data is available')
@@ -257,15 +292,21 @@ export function useDataInsights() {
     setError('')
 
     try {
+      const totalRowsAllSources = selectedDataSources.reduce((total, sourceId) => {
+        return total + (dataStore?.[sourceId]?.length || 0)
+      }, 0)
+
       const request: InsightRequest = {
         prompt: userPrompt,
         data: filteredAndSortedData,
-        dataSource: selectedDataSource,
+        dataSource: selectedDataSources.join(', '), // Legacy compatibility
+        dataSources: selectedDataSources,
         filters,
-        totalRows: dataStore?.[selectedDataSource]?.length || 0,
+        totalRows: totalRowsAllSources,
         filteredRows: filteredAndSortedData.length,
         currency: settings.currency || 'USD',
-        provider: selectedLLM
+        provider: selectedLLM,
+        rowLimitPerSource
       }
 
       const response = await fetch('/api/insights', {
@@ -288,7 +329,7 @@ export function useDataInsights() {
     } finally {
       setIsGeneratingInsights(false)
     }
-  }, [userPrompt, filteredAndSortedData, selectedDataSource, filters, dataStore, settings.currency, selectedLLM])
+  }, [userPrompt, filteredAndSortedData, selectedDataSources, filters, dataStore, settings.currency, selectedLLM, rowLimitPerSource])
 
   // Get available operators for a column
   const getAvailableOperators = useCallback((columnName: string) => {
@@ -298,13 +339,32 @@ export function useDataInsights() {
     return FILTER_OPERATORS[column.type] || []
   }, [columns])
 
+  // Multi-source selection helpers
+  const toggleDataSource = useCallback((sourceId: string) => {
+    setSelectedDataSources(prev => 
+      prev.includes(sourceId)
+        ? prev.filter(id => id !== sourceId)
+        : [...prev, sourceId]
+    )
+  }, [])
+
+  const selectAllDataSources = useCallback(() => {
+    const availableSources = availableDataSources.filter(ds => ds.available).map(ds => ds.id)
+    setSelectedDataSources(availableSources)
+  }, [availableDataSources])
+
+  const clearAllDataSources = useCallback(() => {
+    setSelectedDataSources([])
+  }, [])
+
   return {
     // State
-    selectedDataSource,
+    selectedDataSources,
     columns,
     filters,
     sortConfig,
     previewRowCount,
+    rowLimitPerSource,
     userPrompt,
     selectedLLM,
     aiResponse,
@@ -318,8 +378,12 @@ export function useDataInsights() {
     dataSummary,
     
     // Actions
-    setSelectedDataSource,
+    setSelectedDataSources,
+    toggleDataSource,
+    selectAllDataSources,
+    clearAllDataSources,
     setPreviewRowCount,
+    setRowLimitPerSource,
     setUserPrompt,
     setSelectedLLM,
     addFilter,

@@ -6,7 +6,7 @@ const MAX_RECOMMENDED_INSIGHT_ROWS = 1000
 export async function POST(request: NextRequest) {
   try {
     const body: InsightRequest = await request.json()
-    const { prompt, data, dataSource, filters, totalRows, filteredRows, currency, provider } = body
+    const { prompt, data, dataSource, dataSources, filters, totalRows, filteredRows, currency, provider, rowLimitPerSource } = body
 
     if (!prompt || !data || data.length === 0) {
       return NextResponse.json(
@@ -24,11 +24,13 @@ export async function POST(request: NextRequest) {
       prompt,
       data: dataToAnalyze,
       dataSource,
+      dataSources,
       filters,
       totalRows,
       filteredRows,
       currency,
-      provider
+      provider,
+      rowLimitPerSource
     })
 
     return NextResponse.json(response)
@@ -44,34 +46,53 @@ export async function POST(request: NextRequest) {
 }
 
 async function generateInsightsWithProvider(request: InsightRequest): Promise<LLMResponse> {
-  const { prompt, data, dataSource, filters, totalRows, filteredRows, currency, provider } = request
+  const { prompt, data, dataSource, dataSources, filters, totalRows, filteredRows, currency, provider, rowLimitPerSource } = request
+
+  // Determine if this is multi-source analysis
+  const isMultiSource = dataSources && dataSources.length > 1
+  const sourcesList = dataSources || [dataSource]
 
   // Create context for the AI
   const context = {
-    dataSource,
+    dataSource: isMultiSource ? dataSources?.join(', ') : dataSource,
+    dataSources: sourcesList,
+    isMultiSource,
     totalRows,
     filteredRows,
     currency,
+    rowLimitPerSource,
     filters: filters.map(f => `${f.column} ${f.operator} ${f.value}`).join(', '),
     dataSample: data.slice(0, 10), // Send first 10 rows as sample
     columnNames: Object.keys(data[0] || {}),
     dataTypes: inferDataTypes(data[0] || {})
   }
 
-  const systemPrompt = `You are a data analyst assistant. Analyze the provided advertising data and respond to the user's query.
+  // Enhanced system prompt for multi-source analysis
+  const systemPrompt = `You are a data analyst assistant specializing in advertising campaign performance analysis. Analyze the provided data and respond to the user's query with comprehensive insights.
 
-Context:
-- Data Source: ${context.dataSource}
-- Total Rows: ${context.totalRows}
-- Filtered Rows: ${context.filteredRows}
+Analysis Context:
+${isMultiSource ? `- Multi-Source Analysis: ${sourcesList.join(', ')}` : `- Data Source: ${context.dataSource}`}
+- Total Rows Across All Sources: ${context.totalRows}
+- Filtered/Analyzed Rows: ${context.filteredRows}
+${rowLimitPerSource ? `- Row Limit Per Source: ${rowLimitPerSource}` : ''}
 - Currency: ${currency}
 - Applied Filters: ${context.filters || 'None'}
 - Available Columns: ${context.columnNames.join(', ')}
 
+${isMultiSource ? `
+IMPORTANT: This is a multi-source analysis combining data from multiple dashboard views. Look for:
+- Cross-source patterns and relationships
+- Comparative insights between different data sources
+- Overall performance trends across the combined dataset
+- Correlations between metrics from different sources
+
+The data includes a __dataSource field indicating which source each row came from.
+` : ''}
+
 Data Sample (first 10 rows):
 ${JSON.stringify(context.dataSample, null, 2)}
 
-Please provide clear, actionable insights based on the data and the user's specific question. Focus on patterns, trends, and recommendations that would be valuable for advertising campaign optimization.`
+Please provide clear, actionable insights based on the data and the user's specific question. Focus on patterns, trends, and recommendations that would be valuable for advertising campaign optimization.${isMultiSource ? ' Pay special attention to cross-source relationships and comprehensive analysis across all selected data sources.' : ''}`
 
   const userPrompt = `${prompt}\n\nPlease analyze the data and provide insights.`
 

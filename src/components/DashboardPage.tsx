@@ -201,7 +201,7 @@ export function DashboardPage() {
                                             <TableHead>Negative Keyword Conflicts</TableHead>
                                             <TableHead>Impressions Outside Country</TableHead>
                                             <TableHead>Display Apps Running</TableHead>
-                                            <TableHead>Geo Location "United States"</TableHead>
+                                            <TableHead>Geo Location &quot;United States&quot;</TableHead>
                                         </>
                                     )}
                                 </TableRow>

@@ -9,17 +9,18 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Badge } from '@/components/ui/badge'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { Textarea } from '@/components/ui/textarea'
-import { ArrowUpDown, Plus, X, Loader2, BarChart3, Filter, Database, Brain } from 'lucide-react'
+import { ArrowUpDown, Plus, X, Loader2, BarChart3, Filter, Database, Brain, CheckSquare, Square } from 'lucide-react'
 import { COLORS } from '@/lib/config'
 
 export default function DataInsightsPage() {
   const {
     // State
-    selectedDataSource,
+    selectedDataSources,
     columns,
     filters,
     sortConfig,
     previewRowCount,
+    rowLimitPerSource,
     userPrompt,
     selectedLLM,
     aiResponse,
@@ -33,8 +34,12 @@ export default function DataInsightsPage() {
     dataSummary,
     
     // Actions
-    setSelectedDataSource,
+    setSelectedDataSources,
+    toggleDataSource,
+    selectAllDataSources,
+    clearAllDataSources,
     setPreviewRowCount,
+    setRowLimitPerSource,
     setUserPrompt,
     setSelectedLLM,
     addFilter,
@@ -69,22 +74,114 @@ export default function DataInsightsPage() {
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <Database size={20} />
-                Data Source
+                Select Data Sources for Analysis
+                {selectedDataSources.length > 0 && (
+                  <Badge variant="secondary" className="ml-auto">
+                    {selectedDataSources.length}
+                  </Badge>
+                )}
               </CardTitle>
+              <CardDescription>
+                Choose multiple data sources to analyze together
+              </CardDescription>
             </CardHeader>
-            <CardContent>
-              <Select value={selectedDataSource} onValueChange={setSelectedDataSource}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Select a data source" />
-                </SelectTrigger>
-                <SelectContent>
-                  {availableDataSources.map(source => (
-                    <SelectItem key={source.id} value={source.id}>
-                      {source.name} ({source.description.split('(')[1]?.split(')')[0]})
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+            <CardContent className="space-y-4">
+              {/* Data source checkboxes */}
+              <div className="space-y-3">
+                {availableDataSources.map(source => (
+                  <div 
+                    key={source.id} 
+                    className={`flex items-center gap-3 p-3 rounded-lg border ${
+                      source.selected ? 'bg-blue-50 border-blue-200' : 'bg-gray-50 border-gray-200'
+                    } ${source.available ? 'cursor-pointer hover:bg-opacity-80' : 'opacity-50 cursor-not-allowed'}`}
+                    onClick={() => source.available && toggleDataSource(source.id)}
+                  >
+                    <div className="flex-shrink-0">
+                      {source.selected ? (
+                        <CheckSquare size={20} className="text-blue-600" />
+                      ) : (
+                        <Square size={20} className="text-gray-400" />
+                      )}
+                    </div>
+                    <div className="flex-1">
+                      <div className="font-medium text-sm">
+                        {source.name}
+                        {source.id === 'Dashboard LivCor' && (
+                          <span className="ml-2 text-xs text-blue-600">(default)</span>
+                        )}
+                      </div>
+                      <div className="text-xs text-gray-500">
+                        {source.rowCount} rows available
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+              
+              {/* Select All / Clear All buttons */}
+              <div className="flex gap-2 pt-2 border-t">
+                <Button 
+                  onClick={selectAllDataSources} 
+                  variant="outline" 
+                  size="sm"
+                  className="flex-1"
+                >
+                  Select All
+                </Button>
+                <Button 
+                  onClick={clearAllDataSources} 
+                  variant="outline" 
+                  size="sm"
+                  className="flex-1"
+                  disabled={selectedDataSources.length === 0}
+                >
+                  Clear All
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Data Volume Control */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <BarChart3 size={20} />
+                Data Volume Control
+              </CardTitle>
+              <CardDescription>
+                Control the amount of data analyzed for performance
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div>
+                <Label htmlFor="row-limit">Rows per Data Source</Label>
+                <Select 
+                  value={rowLimitPerSource.toString()} 
+                  onValueChange={(value) => setRowLimitPerSource(Number(value))}
+                >
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="100">100</SelectItem>
+                    <SelectItem value="250">250</SelectItem>
+                    <SelectItem value="500">500</SelectItem>
+                    <SelectItem value="1000">1000</SelectItem>
+                    <SelectItem value="2000">2000</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              
+              {dataSummary.estimatedTotalRows && (
+                <div className="p-3 bg-gray-50 rounded-lg">
+                  <div className="text-sm font-medium">Estimated Total Rows: {dataSummary.estimatedTotalRows.toLocaleString()}</div>
+                  {dataSummary.estimatedTotalRows > 1000 && (
+                    <div className="text-xs text-amber-600 mt-1 flex items-center gap-1">
+                      <span>⚠️</span> Large datasets may take longer to process
+                    </div>
+                  )}
+                </div>
+              )}
             </CardContent>
           </Card>
 
@@ -248,12 +345,26 @@ export default function DataInsightsPage() {
             <CardContent>
               {hasData ? (
                 <div className="space-y-4">
+                  {/* Multi-source context */}
+                  {dataSummary.selectedSources && dataSummary.selectedSources.length > 1 && (
+                    <div className="p-3 bg-blue-50 rounded-lg border border-blue-200">
+                      <h4 className="font-semibold text-sm mb-2">Analyzing data from:</h4>
+                      <div className="space-y-1">
+                        {dataSummary.selectedSources.map(source => (
+                          <div key={source} className="text-sm text-blue-700">
+                            • {source} ({availableDataSources.find(ds => ds.id === source)?.rowCount || 0} rows)
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                  
                   <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                     <div className="text-center p-3 bg-gray-50 rounded">
                       <div className="text-2xl font-bold" style={{ color: COLORS.primary }}>
                         {dataSummary.totalRows.toLocaleString()}
                       </div>
-                      <div className="text-sm text-gray-600">Total Rows</div>
+                      <div className="text-sm text-gray-600">Filtered Rows</div>
                     </div>
                     
                     {Object.entries(dataSummary.metrics).slice(0, 3).map(([column, stats]) => (
@@ -286,7 +397,9 @@ export default function DataInsightsPage() {
                 <div className="text-center py-8 text-gray-500">
                   {filteredAndSortedData.length === 0 && hasData 
                     ? "No data matches your current filters"
-                    : "Select a data source to view summary"
+                    : selectedDataSources.length === 0
+                      ? "Select data sources to view summary"
+                      : "No data available for selected sources"
                   }
                 </div>
               )}
@@ -352,7 +465,9 @@ export default function DataInsightsPage() {
                 <div className="text-center py-8 text-gray-500">
                   {filteredAndSortedData.length === 0 && hasData 
                     ? "No data matches your current filters"
-                    : "Select a data source to view data"
+                    : selectedDataSources.length === 0
+                      ? "Select data sources to view data"
+                      : "No data available for selected sources"
                   }
                 </div>
               )}
@@ -364,12 +479,19 @@ export default function DataInsightsPage() {
             <Card>
               <CardHeader>
                 <CardTitle>AI Insights</CardTitle>
-                {aiResponse.tokenUsage && (
-                  <CardDescription>
-                    Tokens: {aiResponse.tokenUsage.totalTokens} 
-                    (Input: {aiResponse.tokenUsage.inputTokens}, Output: {aiResponse.tokenUsage.outputTokens})
-                  </CardDescription>
-                )}
+                <CardDescription>
+                  {dataSummary.selectedSources && dataSummary.selectedSources.length > 1 && (
+                    <div className="mb-2">
+                      Analysis includes data from: {dataSummary.selectedSources.join(', ')}
+                    </div>
+                  )}
+                  {aiResponse.tokenUsage && (
+                    <div>
+                      Tokens: {aiResponse.tokenUsage.totalTokens} 
+                      (Input: {aiResponse.tokenUsage.inputTokens}, Output: {aiResponse.tokenUsage.outputTokens})
+                    </div>
+                  )}
+                </CardDescription>
               </CardHeader>
               <CardContent>
                 {aiResponse.error ? (

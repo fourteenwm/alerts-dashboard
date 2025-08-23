@@ -183,6 +183,8 @@ export interface SortConfig {
 
 export interface DataSummary {
   totalRows: number
+  estimatedTotalRows?: number // For multi-source analysis
+  selectedSources?: string[] // List of sources included in summary
   metrics: {
     [columnName: string]: {
       min: number
@@ -220,12 +222,14 @@ export interface LLMResponse {
 export interface InsightRequest {
   prompt: string
   data: any[]
-  dataSource: string
+  dataSource: string | string[] // Support single or multiple data sources
+  dataSources?: string[] // Array of selected data sources
   filters: FilterCondition[]
   totalRows: number
   filteredRows: number
   currency: string
   provider: LLMProvider
+  rowLimitPerSource?: number // New field for row limiting
 }
 
 // Data source configuration
@@ -234,6 +238,8 @@ export interface DataSourceConfig {
   name: string
   description: string
   available: boolean
+  selected?: boolean // New field for multi-selection
+  rowCount?: number // Actual row count for the data source
 }
 
 // Available filter operators by column type
